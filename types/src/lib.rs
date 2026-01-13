@@ -2,21 +2,21 @@ use std::collections::BTreeMap;
 
 #[derive(rkyv::Serialize, Debug, rkyv::Archive)]
 #[rkyv(derive(Debug))]
-pub struct TestStruct {
-    pub text: String,
-    pub tree: BTreeMap<u32, Vec<(u16, u16)>>,
+pub struct Journeys {
+    pub journeys: BTreeMap<u32, Vec<Journey>>,
+    pub stop_ids: Vec<String>,
+    pub route_ids: Vec<String>,
 }
 
-impl TestStruct {
-    pub fn new(text: String) -> Self {
-        let tree = (0..136000).map(|i| (i, (('A' as _)..).zip(('a' as _)..).take(12).collect()));
-        Self {
-            text,
-            tree: tree.collect(),
-        }
-    }
+#[derive(rkyv::Serialize, Debug, rkyv::Archive)]
+#[rkyv(derive(Debug))]
+pub struct Journey {
+    pub arrival: u16,
+    pub plan: Vec<(u16, u16)>,
+}
 
-    pub unsafe fn access_unchecked(bytes: &[u8]) -> &ArchivedTestStruct {
+impl Journeys {
+    pub unsafe fn access_unchecked(bytes: &[u8]) -> &ArchivedJourneys {
         unsafe { rkyv::access_unchecked(bytes) }
     }
 

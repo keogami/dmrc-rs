@@ -6,9 +6,12 @@ edition = "2024"
 [dependencies]
 rkyv = "0.8.13"
 thiserror = "2.0.17"
-raptor = "0.1.1"
 types = {path = "./types"}
 
 [build-dependencies]
+anyhow = "1.0.100"
+gtfs-structures = "0.46.1"
+rayon = "1.10"
 rkyv = "0.8.13"
 types = {path = "./types"}
+raptor = "0.1.1"
