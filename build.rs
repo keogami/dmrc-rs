@@ -4,7 +4,42 @@ use anyhow::Context;
 use gtfs_structures::Gtfs;
 use raptor::{Timetable, gtfs::GtfsTimetable};
 use rayon::prelude::*;
-use types::{Journey, Journeys, RouteDetails, StopDetails};
+
+// Build-time type definitions (must match src/types.rs)
+#[derive(rkyv::Serialize, rkyv::Archive)]
+struct Journeys {
+    journeys: BTreeMap<u32, Vec<Journey>>,
+    stops: Vec<StopDetails>,
+    routes: Vec<RouteDetails>,
+}
+
+#[derive(rkyv::Serialize, rkyv::Archive)]
+struct Journey {
+    arrival: u16,
+    plan: Vec<(u16, u16)>,
+}
+
+#[derive(rkyv::Serialize, rkyv::Archive)]
+struct StopDetails {
+    name: String,
+    id: String,
+}
+
+#[derive(rkyv::Serialize, rkyv::Archive)]
+struct RouteDetails {
+    short_name: String,
+    long_name: String,
+    id: String,
+    color: [u8; 3],
+}
+
+impl Journeys {
+    fn as_bytes(&self) -> Box<[u8]> {
+        rkyv::to_bytes::<rkyv::rancor::Panic>(self)
+            .unwrap()
+            .into_boxed_slice()
+    }
+}
 
 fn main() -> anyhow::Result<()> {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
@@ -32,7 +67,6 @@ fn collect_stop_details(gtfs: &Gtfs) -> Vec<StopDetails> {
         })
         .collect();
 
-    // TODO: figure out if you can directly turn &String to Box<str>
     stops.sort_by_cached_key(|s| s.id.clone().into_boxed_str());
 
     stops
@@ -54,7 +88,6 @@ fn collect_route_details(gtfs: &Gtfs) -> Vec<RouteDetails> {
         })
         .collect();
 
-    // TODO: figure out if you can directly turn &String to Box<str>
     routes.sort_by_cached_key(|s| s.id.clone().into_boxed_str());
 
     routes
@@ -65,9 +98,6 @@ fn pre_compute(path: impl AsRef<Path>) -> anyhow::Result<Journeys> {
     let gtfs = Gtfs::from_path(path)?;
     let timetable = GtfsTimetable::new(&gtfs);
 
-    // still keeping nmrc's stations cuz im lazy tbh. removing them requires either:
-    // - remove from source, which means keeping a patch everytime we update our copy of dmrc's static gtfs
-    // - or, update gtfs after parsing, which i might actually do later
     let stops = collect_stop_details(&gtfs);
     let routes = collect_route_details(&gtfs);
 
@@ -94,8 +124,6 @@ fn pre_compute(path: impl AsRef<Path>) -> anyhow::Result<Journeys> {
             let ps_idx = timetable.lookup_stop(ps).expect("invalid ps") as u32;
             let pt_idx = timetable.lookup_stop(pt).expect("invalid pt") as u32;
 
-            // maybe a tuple might give similar packing?
-            // TODO: confirm this is optimal
             let key: u32 = ps_idx << 16 | pt_idx;
 
             let departure: usize = 19 * 3600 + 15 * 60;

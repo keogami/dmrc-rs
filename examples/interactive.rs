@@ -3,9 +3,8 @@ use std::{
     time::Duration,
 };
 
-use dmrc_rs::load_routes;
+use dmrc_rs::{load_routes, ArchivedJourney, ArchivedJourneys};
 use rkyv::rend::u32_le;
-use types::ArchivedJourneys;
 
 fn main() {
     let data = load_routes();
@@ -77,7 +76,7 @@ fn prompt_stop_selection(prompt: &str, data: &ArchivedJourneys) -> usize {
     }
 }
 
-fn print_journey(journey: &types::ArchivedJourney, data: &ArchivedJourneys) {
+fn print_journey(journey: &ArchivedJourney, data: &ArchivedJourneys) {
     println!(
         "  Arrival: {} seconds\n",
         humantime::format_duration(Duration::new(journey.arrival.to_native() as _, 0))
