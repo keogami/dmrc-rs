@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
 
+use nucleo_matcher::{Config, Matcher, pattern::Pattern};
+
 #[derive(rkyv::Serialize, Debug, rkyv::Archive)]
 #[rkyv(derive(Debug))]
 pub struct Journeys {
     pub journeys: BTreeMap<u32, Vec<Journey>>,
-    pub stop_ids: Vec<StopDetails>,
-    pub route_ids: Vec<RouteDetails>,
+    pub stops: Vec<StopDetails>,
+    pub routes: Vec<RouteDetails>,
 }
 
 #[derive(rkyv::Serialize, Debug, rkyv::Archive)]
@@ -43,5 +45,32 @@ impl Journeys {
         rkyv::to_bytes::<rkyv::rancor::Panic>(self)
             .unwrap()
             .into_boxed_slice()
+    }
+}
+
+impl ArchivedJourneys {
+    /// Fuzzy search stops by name, returning (index, score) pairs
+    pub fn fuzzy_search(&self, pattern: &str) -> Vec<(usize, u32)> {
+        // creating a matcher is very expensive
+        // TODO: create one statically with some fast mut access
+        let mut matcher = Matcher::new(Config::DEFAULT.match_paths());
+        let pattern = Pattern::parse(
+            pattern,
+            nucleo_matcher::pattern::CaseMatching::Smart,
+            nucleo_matcher::pattern::Normalization::Smart,
+        );
+
+        let matches = pattern.match_list(
+            self.stops.iter().map(|s| s.name.as_str()),
+            &mut matcher,
+        );
+
+        // Convert matched names back to indices
+        matches
+            .into_iter()
+            .filter_map(|(name, score)| {
+                self.stops.iter().position(|s| s.name == name).map(|i| (i, score))
+            })
+            .collect()
     }
 }

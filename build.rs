@@ -98,11 +98,13 @@ fn pre_compute(path: impl AsRef<Path>) -> anyhow::Result<Journeys> {
             // TODO: confirm this is optimal
             let key: u32 = ps_idx << 16 | pt_idx;
 
+            let departure: usize = 19 * 3600 + 15 * 60;
+
             let plan: Vec<Journey> = timetable
-                .raptor(4, 17120, ps_idx as usize, pt_idx as usize)
+                .raptor(4, departure as _, ps_idx as usize, pt_idx as usize)
                 .into_iter()
                 .map(|j| Journey {
-                    arrival: j.arrival as u16,
+                    arrival: (j.arrival - departure) as _,
                     plan: j.plan.into_iter().map(|(r, s)| (r as _, s as _)).collect(),
                 })
                 .collect();
@@ -112,8 +114,8 @@ fn pre_compute(path: impl AsRef<Path>) -> anyhow::Result<Journeys> {
         .collect();
 
     Ok(Journeys {
-        stop_ids: stops,
-        route_ids: routes,
+        stops,
+        routes,
         journeys,
     })
 }
