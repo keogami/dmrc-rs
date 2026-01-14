@@ -1,10 +1,10 @@
 use std::{collections::BTreeMap, env, fs, path::Path};
 
-use anyhow::{Context, anyhow};
+use anyhow::Context;
 use gtfs_structures::Gtfs;
 use raptor::{Timetable, gtfs::GtfsTimetable};
 use rayon::prelude::*;
-use types::{Journey, Journeys};
+use types::{Journey, Journeys, RouteDetails, StopDetails};
 
 fn main() -> anyhow::Result<()> {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
@@ -22,6 +22,44 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn collect_stop_details(gtfs: &Gtfs) -> Vec<StopDetails> {
+    let mut stops: Vec<_> = gtfs
+        .stops
+        .iter()
+        .map(|(id, stop)| StopDetails {
+            name: stop.name.clone().unwrap_or_default(),
+            id: id.clone(),
+        })
+        .collect();
+
+    // TODO: figure out if you can directly turn &String to Box<str>
+    stops.sort_by_cached_key(|s| s.id.clone().into_boxed_str());
+
+    stops
+}
+
+fn collect_route_details(gtfs: &Gtfs) -> Vec<RouteDetails> {
+    let mut routes: Vec<_> = gtfs
+        .routes
+        .iter()
+        .map(|(id, route)| RouteDetails {
+            short_name: route.short_name.clone().unwrap_or_default(),
+            long_name: route.long_name.clone().unwrap_or_default(),
+            id: id.clone(),
+            color: {
+                let color = route.color.unwrap_or_default();
+
+                [color.r, color.g, color.b]
+            },
+        })
+        .collect();
+
+    // TODO: figure out if you can directly turn &String to Box<str>
+    routes.sort_by_cached_key(|s| s.id.clone().into_boxed_str());
+
+    routes
+}
+
 fn pre_compute(path: impl AsRef<Path>) -> anyhow::Result<Journeys> {
     let path = path.as_ref();
     let gtfs = Gtfs::from_path(path)?;
@@ -30,14 +68,12 @@ fn pre_compute(path: impl AsRef<Path>) -> anyhow::Result<Journeys> {
     // still keeping nmrc's stations cuz im lazy tbh. removing them requires either:
     // - remove from source, which means keeping a patch everytime we update our copy of dmrc's static gtfs
     // - or, update gtfs after parsing, which i might actually do later
-    let mut stops: Vec<_> = gtfs.stops.keys().cloned().collect();
-    stops.sort();
-    let mut routes: Vec<_> = gtfs.routes.keys().cloned().collect();
-    routes.sort();
+    let stops = collect_stop_details(&gtfs);
+    let routes = collect_route_details(&gtfs);
 
     // dmrc's gtfs includes nmrc stops as well, for whatever reason.
     // but no trips actually touch these stops, so they just waste space
-    let mut actual_stops = stops.clone();
+    let mut actual_stops: Vec<_> = stops.iter().map(|s| s.id.clone()).collect();
     actual_stops
         .retain(|item| !(500..=520).contains(&item.parse().expect("dmrc IDs to be valid numbers")));
 

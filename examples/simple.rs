@@ -17,22 +17,4 @@ fn main() {
         "- max plans: {:?}",
         test.journeys.values().map(|j| j.len()).max()
     );
-
-    let count = test
-        .journeys
-        .iter()
-        .filter(|(_, plans)| plans.is_empty())
-        .inspect(|(key, _)| {
-            let key = key.to_native();
-            let ps = key >> 16;
-            let pt = key & (0x0000FFFF);
-
-            println!(
-                "{} -> {}",
-                test.stop_ids[ps as usize], test.stop_ids[pt as usize]
-            );
-        })
-        .count();
-
-    println!("- unreachable: {count}");
 }

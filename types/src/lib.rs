@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 #[rkyv(derive(Debug))]
 pub struct Journeys {
     pub journeys: BTreeMap<u32, Vec<Journey>>,
-    pub stop_ids: Vec<String>,
-    pub route_ids: Vec<String>,
+    pub stop_ids: Vec<StopDetails>,
+    pub route_ids: Vec<RouteDetails>,
 }
 
 #[derive(rkyv::Serialize, Debug, rkyv::Archive)]
@@ -13,6 +13,23 @@ pub struct Journeys {
 pub struct Journey {
     pub arrival: u16,
     pub plan: Vec<(u16, u16)>,
+}
+
+#[derive(rkyv::Serialize, Debug, rkyv::Archive)]
+#[rkyv(derive(Debug))]
+pub struct StopDetails {
+    pub name: String,
+    pub id: String,
+}
+
+#[derive(rkyv::Serialize, Debug, rkyv::Archive)]
+#[rkyv(derive(Debug))]
+pub struct RouteDetails {
+    pub short_name: String,
+    pub long_name: String,
+    pub id: String,
+    /// array of [r, g, b]
+    pub color: [u8; 3],
 }
 
 impl Journeys {
